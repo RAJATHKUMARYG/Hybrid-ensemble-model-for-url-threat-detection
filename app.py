@@ -8,9 +8,24 @@ import io
 import base64
 import matplotlib.pyplot as plt
 from PIL import Image
-import pytesseract
+# pytesseract is optional on some hosts (it requires the Tesseract binary to be installed).
+# Import it if available; otherwise disable OCR features gracefully.
+HAS_PYTESSERACT = False
+try:
+    import pytesseract
+    HAS_PYTESSERACT = True
+except Exception:
+    pytesseract = None
+    HAS_PYTESSERACT = False
 import cv2
-from pyzbar.pyzbar import decode
+# pyzbar (zbar) is optional because it requires the native zbar shared library.
+HAS_PYZBAR = False
+try:
+    from pyzbar.pyzbar import decode
+    HAS_PYZBAR = True
+except Exception:
+    decode = None
+    HAS_PYZBAR = False
 import shap
 import os
 import requests
@@ -227,7 +242,14 @@ def analyze_text():
 def analyze_image():
     file = request.files['image']
     img = Image.open(file.stream)
-    text = pytesseract.image_to_string(img)
+    if not HAS_PYTESSERACT:
+        flash('OCR is not available on this deployment. Image-to-text analysis is disabled.')
+        return redirect(url_for('menu'))
+    try:
+        text = pytesseract.image_to_string(img)
+    except Exception:
+        flash('OCR failed while reading the image. Please try a different image or enable Tesseract in your deployment.')
+        return redirect(url_for('menu'))
     url = extract_url_from_text(text)
     if not url:
         flash('No URL found in image. Please try again.')
@@ -243,8 +265,15 @@ def analyze_qr():
     file = request.files['qr']
     img = Image.open(file.stream)
     img.save('temp_qr.png')
-    decoded = decode(cv2.imread('temp_qr.png'))
-    url = decoded[0].data.decode() if decoded else ''
+    if not HAS_PYZBAR:
+        flash('QR code scanning is not available on this deployment (missing zbar library).')
+        return redirect(url_for('menu'))
+    try:
+        decoded = decode(cv2.imread('temp_qr.png'))
+        url = decoded[0].data.decode() if decoded else ''
+    except Exception:
+        flash('Failed to decode QR code. Make sure the image contains a clear QR code.')
+        return redirect(url_for('menu'))
     if not url:
         flash('No URL found in QR code. Please try again.')
         return redirect(url_for('menu'))

@@ -1,0 +1,14 @@
+Flask
+Flask-Login
+Flask-SQLAlchemy
+scikit-learn
+pandas
+matplotlib
+numpy
+pillow
+opencv-python
+pyzbar
+openai
+shap
+requests
+beautifulsoup4

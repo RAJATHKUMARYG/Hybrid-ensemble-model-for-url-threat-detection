@@ -12,3 +12,4 @@ openai
 shap
 requests
 beautifulsoup4
+pytesseract
